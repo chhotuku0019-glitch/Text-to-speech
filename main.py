@@ -1,17 +1,34 @@
 import io
 import os
+import urllib.request
 import wave
 
 from flask import Flask, jsonify, request, send_file, send_from_directory
 from piper import PiperVoice
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODEL_PATH = os.path.join(BASE_DIR, "model", "hi_IN-rohan-medium.onnx")
+MODEL_DIR = os.path.join(BASE_DIR, "model")
+MODEL_NAME = "hi_IN-rohan-medium"
+MODEL_PATH = os.path.join(MODEL_DIR, MODEL_NAME + ".onnx")
+CONFIG_PATH = MODEL_PATH + ".json"
+
+HF_BASE = "https://huggingface.co/rhasspy/piper-voices/resolve/main/hi/hi_IN/rohan/medium/"
+
+
+def ensure_model():
+    """Model GitHub par nahi hai, to pehli baar server start par download hoga."""
+    os.makedirs(MODEL_DIR, exist_ok=True)
+    for path in (MODEL_PATH, CONFIG_PATH):
+        if not os.path.exists(path):
+            url = HF_BASE + os.path.basename(path)
+            print("Downloading", url, flush=True)
+            urllib.request.urlretrieve(url, path)
+
+
+ensure_model()
+voice = PiperVoice.load(MODEL_PATH, config_path=CONFIG_PATH)
 
 app = Flask(__name__)
-
-# Model ek baar load hota hai (server start par)
-voice = PiperVoice.load(MODEL_PATH)
 
 
 @app.route("/")
